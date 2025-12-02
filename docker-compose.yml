@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados
+  db:
+    image: postgis/postgis
+    container_name: vigimanaus-db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=vigimanaus
+    ports:
+      - "5433:5432" # Mantivemos a porta 5433 que você já usava
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - vbe-network
+
+  # 2. Back-end (API Java)
+  api:
+    build: ./api # Caminho para a pasta do Java
+    container_name: vigimanaus-api
+    ports:
+      - "8081:8081"
+    environment:
+      # Atenção: Aqui mudamos 'localhost' para 'db' (nome do serviço acima)
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/vigimanaus
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SERVER_PORT=8081
+    depends_on:
+      - db
+    networks:
+      - vbe-network
+
+  # 3. Front-end (React)
+  web:
+    build: ./vbehub-web # Caminho para a pasta do React
+    container_name: vigimanaus-web
+    ports:
+      - "80:80" # O site abrirá na porta 80 (padrão web)
+    depends_on:
+      - api
+    networks:
+      - vbe-network
+
+volumes:
+  postgres_data:
+
+networks:
+  vbe-network:
+    driver: bridge
