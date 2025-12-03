@@ -27,7 +27,7 @@ const KanbanBoard = () => {
   useEffect(() => {
     const fetchSinais = async () => {
       try {
-        const response = await axios.get('http://localhost:8081/api/sinais');
+        const response = await axios.get('http://72.61.222.85:8081/api/sinais');
         const data = response.data;
 
         // Organizar a lista plana da API dentro das colunas do Kanban
@@ -84,7 +84,7 @@ const KanbanBoard = () => {
 
     // 3. Chamar a API Java para salvar a mudança
     try {
-      await axios.put(`http://localhost:8081/api/sinais/${removed.id}/status`, novoStatus, {
+      await axios.put(`http://72.61.222.85:8081/api/sinais/${removed.id}/status`, novoStatus, {
         headers: { 'Content-Type': 'text/plain' } // Importante para o Controller Java ler a String crua
       });
       console.log(`Status do Sinal ${removed.id} atualizado para ${novoStatus}`);

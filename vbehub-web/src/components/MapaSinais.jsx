@@ -24,7 +24,7 @@ const MapaSinais = () => {
 
     useEffect(() => {
         // IMPORTANTE: Porta 8081 aqui!
-        axios.get('http://localhost:8081/api/sinais')
+        axios.get('http://72.61.222.85:8081/api/sinais')
             .then(response => {
                 // Filtra apenas sinais que tenham latitude e longitude válidas
                 const validos = response.data.filter(s => s.latitude && s.longitude);
