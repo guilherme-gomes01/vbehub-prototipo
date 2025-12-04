@@ -4,9 +4,17 @@ import MapaSinais from './components/MapaSinais';
 import { CssBaseline, AppBar, Toolbar, Typography, Container, Tabs, Tab, Box } from '@mui/material';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import MapIcon from '@mui/icons-material/Map';
+import Login from './components/Login';
 
 function App() {
+  // Estado para controlar se o usuario esta logado
+  const [logado, setLogado] = useState(false); 
   const [tabIndex, setTabIndex] = useState(0);
+
+  // Se nao estiver logado, retorna apenas a tela de Login
+  if (!logado) {
+      return <Login onLogin={setLogado} />;
+  }
 
   const handleTabChange = (event, newValue) => {
     setTabIndex(newValue);
@@ -20,7 +28,7 @@ function App() {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            🚨 VigiManaus - VBE Hub
+            🚨 Sistema VBE Hub
           </Typography>
         </Toolbar>
         
