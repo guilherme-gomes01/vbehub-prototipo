@@ -5,28 +5,43 @@ import axios from 'axios';
 import { Box, Paper, Typography, Chip } from '@mui/material';
 import L from 'leaflet';
 
-// --- CORREÇÃO DE ÍCONES DO LEAFLET (Bug padrão do React) ---
-import iconMarker from 'leaflet/dist/images/marker-icon.png';
-import iconRetina from 'leaflet/dist/images/marker-icon-2x.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+// --- FUNCAO PARA CRIAR ICONES SVG DINAMICOS ---
+// Cria um icone SVG inline com a cor desejada
+const createCustomIcon = (color) => {
+  return L.divIcon({
+    className: 'custom-icon',
+    html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="36" height="36" fill="${color}" stroke="black" stroke-width="1">
+             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+           </svg>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 36], // A ponta do pino fica no centro inferior
+    popupAnchor: [0, -36], // O popup abre acima do pino
+  });
+};
 
-delete L.Icon.Default.prototype._getIconUrl;
+// Icones pre-definidos para performance
+const icons = {
+  Alto: createCustomIcon('#d32f2f'),   // Vermelho
+  Medio: createCustomIcon('#ed6c02'),  // Laranja/Amarelo Escuro
+  Baixo: createCustomIcon('#2e7d32'),  // Verde
+  Default: createCustomIcon('#1976d2') // Azul (Padrao)
+};
 
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: iconRetina,
-    iconUrl: iconMarker,
-    shadowUrl: iconShadow,
-});
-// ------------------------------------------------------------
+const getIconByRisk = (risk) => {
+  const r = risk ? risk.toLowerCase() : '';
+  if (r.includes('alto')) return icons.Alto;
+  if (r.includes('médio') || r.includes('medio')) return icons.Medio;
+  if (r.includes('baixo')) return icons.Baixo;
+  return icons.Default;
+};
 
 const MapaSinais = () => {
     const [sinais, setSinais] = useState([]);
 
     useEffect(() => {
-        // IMPORTANTE: Porta 8081 aqui!
         axios.get('http://72.61.222.85:8081/api/sinais')
             .then(response => {
-                // Filtra apenas sinais que tenham latitude e longitude válidas
+                // Filtra apenas sinais que tenham latitude e longitude validas
                 const validos = response.data.filter(s => s.latitude && s.longitude);
                 setSinais(validos);
             })
@@ -49,6 +64,7 @@ const MapaSinais = () => {
                     <Marker 
                         key={sinal.id} 
                         position={[sinal.latitude, sinal.longitude]}
+                        icon={getIconByRisk(sinal.nivelRisco)} // Aplica o icone colorido
                     >
                         <Popup>
                             <Box sx={{ minWidth: '200px' }}>
@@ -62,7 +78,13 @@ const MapaSinais = () => {
                                 <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
                                     <Chip 
                                         label={sinal.nivelRisco || 'N/A'} 
-                                        color={sinal.nivelRisco === 'Alto' ? 'error' : sinal.nivelRisco === 'Médio' ? 'warning' : 'success'} 
+                                        // Cor do chip tambem acompanha o risco
+                                        color={
+                                            (sinal.nivelRisco || '').toLowerCase().includes('alto') ? 'error' : 
+                                            (sinal.nivelRisco || '').toLowerCase().includes('médio') ? 'warning' : 
+                                            (sinal.nivelRisco || '').toLowerCase().includes('medio') ? 'warning' : 
+                                            'success'
+                                        } 
                                         size="small" 
                                         sx={{ height: '20px', fontSize: '10px' }}
                                     />
