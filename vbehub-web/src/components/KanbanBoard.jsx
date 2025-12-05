@@ -2,7 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
   Box, Card, CardContent, Typography, Chip, Paper, 
-  TextField, MenuItem, Stack, IconButton, Tooltip 
+  TextField, MenuItem, Stack, IconButton, Tooltip,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button
 } from '@mui/material';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
 import axios from 'axios';
@@ -26,10 +27,13 @@ const columnsFromBackend = {
 
 const KanbanBoard = () => {
   const [columns, setColumns] = useState(columnsFromBackend);
-  
-  
   const [filterFonte, setFilterFonte] = useState('');
   const [filterRisco, setFilterRisco] = useState('');
+
+  // Estados para o Dialog de Acao 
+  const [openDialog, setOpenDialog] = useState(false);
+  const [acaoText, setAcaoText] = useState('');
+  const [pendingMove, setPendingMove] = useState(null); // Guarda a movimentacao pendente
 
   // Carregar dados
   useEffect(() => {
@@ -38,6 +42,7 @@ const KanbanBoard = () => {
         const response = await axios.get('http://72.61.222.85:8081/api/sinais');
         const data = response.data;
         const newColumns = { ...columnsFromBackend };
+        // Limpar para evitar duplicatas em hot reload
         Object.keys(newColumns).forEach(key => newColumns[key].items = []);
 
         data.forEach(sinal => {
@@ -75,11 +80,9 @@ const KanbanBoard = () => {
 
   // Criar a "View" filtrada
   const filteredColumns = useMemo(() => {
-    // Se nao tem filtro, retorna o original (performance)
     if (!filterFonte && !filterRisco) return columns;
 
     const newFiltered = {};
-    
     Object.keys(columns).forEach(key => {
       newFiltered[key] = {
         ...columns[key],
@@ -94,25 +97,17 @@ const KanbanBoard = () => {
     return newFiltered;
   }, [columns, filterFonte, filterRisco]);
 
-  // Logica de Drag and Drop (Adaptada para Filtros)
-  const onDragEnd = async (result) => {
-    if (!result.destination) return;
-    const { source, destination, draggableId } = result;
-
-    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
-
-    // Quando filtrado, usamos o ID para achar o item na lista MESTRE, 
-    // pois o index visual pode nao bater com o index real.
-    
+  // Funcao auxiliar para executar a movimentacao (usada diretamente ou apos o Dialog)
+  const executeMove = async (source, destination, draggableId, acaoDescricao = null) => {
     // Clonar o estado mestre
     const newColumns = { ...columns };
     const sourceColumn = newColumns[source.droppableId];
     const destColumn = newColumns[destination.droppableId];
 
-    // Encontrar o item na lista original pelo ID (mais seguro que index)
+    // Encontrar o item na lista original pelo ID
     const itemIndex = sourceColumn.items.findIndex(item => String(item.id) === draggableId);
     
-    if (itemIndex === -1) return; // Segurança
+    if (itemIndex === -1) return;
 
     const [removed] = sourceColumn.items.splice(itemIndex, 1);
     
@@ -120,9 +115,13 @@ const KanbanBoard = () => {
     const novoStatus = destination.droppableId;
     removed.status = novoStatus;
 
+    // Se houver descricao de acao, adiciona ao card
+    if (acaoDescricao) {
+        const timestamp = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR');
+        removed.descricao = (removed.descricao || '') + `\n\n-------------------\n[AÇÃO TOMADA em ${timestamp}]: ${acaoDescricao}`;
+    }
+
     // Inserir no destino
-    // Se tiver filtro ativo, joga pro final pra evitar confusao de index visual vs real
-    // Se nao tiver filtro, usa o destination.index normal
     if (filterFonte || filterRisco) {
         destColumn.items.push(removed);
     } else {
@@ -140,6 +139,43 @@ const KanbanBoard = () => {
       console.error("Erro ao atualizar status:", error);
       alert("Erro ao salvar no servidor!");
     }
+  };
+
+  // Logica inicial do Drag and Drop
+  const onDragEnd = (result) => {
+    if (!result.destination) return;
+    const { source, destination, draggableId } = result;
+
+    if (source.droppableId === destination.droppableId && source.index === destination.index) return;
+
+    const novoStatus = destination.droppableId;
+
+    // Se for para Evento, intercepta e abre o Dialog
+    if (novoStatus === 'Evento' && source.droppableId !== 'Evento') {
+        setPendingMove({ source, destination, draggableId });
+        setAcaoText(''); // Limpa o texto anterior
+        setOpenDialog(true);
+        return; // pausa aqui e espera o usuario confirmar no Dialog
+    }
+    
+    // Se for qualquer outra movimentacao normal, executa direto
+    executeMove(source, destination, draggableId);
+  };
+
+  // Handler para quando o usuario clica em "Salvar Acao" no Dialog
+  const handleConfirmAction = () => {
+    if (pendingMove) {
+        executeMove(pendingMove.source, pendingMove.destination, pendingMove.draggableId, acaoText);
+        setPendingMove(null);
+        setOpenDialog(false);
+    }
+  };
+
+  // Handler para cancelar (nao move o card)
+  const handleCancelAction = () => {
+    setPendingMove(null);
+    setOpenDialog(false);
+    // O card volta sozinho visualmente pois nao atualizamos o estado 'columns'
   };
 
   const clearFilters = () => {
@@ -278,7 +314,14 @@ const KanbanBoard = () => {
                                       />
                                     </Box>
                                     
-                                    <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.8rem'}}>
+                                    <Typography variant="body2" color="text.secondary" sx={{fontSize: '0.8rem', whiteSpace: 'pre-line'}}>
+                                      {/* Mostra a descricao cortada se for muito longa, mas a acao aparece se for recente */}
+                                      {item.descricao && item.descricao.length > 100 && !item.descricao.includes("AÇÃO TOMADA")
+                                        ? item.descricao.substring(0, 100) + "..." 
+                                        : item.descricao}
+                                    </Typography>
+
+                                    <Typography variant="caption" display="block" sx={{ mt: 1, color: '#999' }}>
                                       📍 {item.localizacaoBairro || 'Manaus'}
                                     </Typography>
                                   </CardContent>
@@ -297,6 +340,39 @@ const KanbanBoard = () => {
           })}
         </DragDropContext>
       </Box>
+
+      {/* --- DIALOG DE REGISTRO DE ACAO --- */}
+      <Dialog open={openDialog} onClose={handleCancelAction} fullWidth maxWidth="sm">
+        <DialogTitle>⚠️ Protocolo de Resposta</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Você está movendo este sinal para <strong>Eventos Confirmados</strong>. 
+            Por favor, descreva a ação de saúde pública tomada para este evento.
+          </DialogContentText>
+          <TextField
+            autoFocus
+            margin="dense"
+            id="acao"
+            label="Descrição da Ação"
+            type="text"
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            value={acaoText}
+            onChange={(e) => setAcaoText(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelAction} color="secondary">
+            Cancelar Movimentação
+          </Button>
+          <Button onClick={handleConfirmAction} variant="contained" color="primary" disabled={!acaoText.trim()}>
+            Confirmar e Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
     </Box>
   );
 };
