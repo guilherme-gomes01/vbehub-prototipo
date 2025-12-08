@@ -5,12 +5,13 @@ services:
   db:
     image: postgis/postgis
     container_name: vigimanaus-db
+    restart: always
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=vigimanaus
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     ports:
-      - "5433:5432" # Mantivemos a porta 5433 que você já usava
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -18,15 +19,15 @@ services:
 
   # 2. Back-end (API Java)
   api:
-    build: ./api # Caminho para a pasta do Java
+    build: ./api
     container_name: vigimanaus-api
+    restart: always
     ports:
       - "8081:8081"
     environment:
-      # Atenção: Aqui mudamos 'localhost' para 'db' (nome do serviço acima)
-      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/vigimanaus
-      - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
       - SERVER_PORT=8081
     depends_on:
       - db
@@ -35,10 +36,11 @@ services:
 
   # 3. Front-end (React)
   web:
-    build: ./vbehub-web # Caminho para a pasta do React
+    build: ./vbehub-web
     container_name: vigimanaus-web
+    restart: always
     ports:
-      - "80:80" # O site abrirá na porta 80 (padrão web)
+      - "80:80"
     depends_on:
       - api
     networks:
