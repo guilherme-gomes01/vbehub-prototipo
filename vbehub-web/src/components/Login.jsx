@@ -9,7 +9,7 @@ const Login = ({ onLogin }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Validacao "Hardcoded" para o MVP
-        if (email === 'joao.analista@vigimanaus.am.gov.br' && senha === '123456') {
+        if (email === 'usuariolocal01@vbehub.com' && senha === '123456') {
             onLogin(true); // Avisa o App que logou
         } else {
             setErro(true);
