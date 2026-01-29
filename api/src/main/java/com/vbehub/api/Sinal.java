@@ -26,10 +26,8 @@ public class Sinal {
     @Column(name = "localizacao_bairro")
     private String localizacaoBairro;
 
-    // Ignoramos 'geom' e 'fonte_id' aqui para simplificar.
-    // Vamos trazê-los na Projection abaixo.
 
-    // Getters e Setters (Se não usar Lombok, gere-os na IDE)
+    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getTitulo() { return titulo; }

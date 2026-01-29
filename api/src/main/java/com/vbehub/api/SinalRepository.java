@@ -26,4 +26,14 @@ public interface SinalRepository extends JpaRepository<Sinal, Long> {
         ORDER BY s.data_deteccao DESC
     """, nativeQuery = true)
     List<SinalProjection> findAllComLatLong();
+
+    List<Sinal> findByStatus(String status);
+
+    // Conta quantos sinais existem por Nível de Risco
+    @Query("SELECT s.nivelRisco, COUNT(s) FROM Sinal s GROUP BY s.nivelRisco")
+    List<Object[]> countByNivelRisco();
+
+    // Conta quantos sinais existem por Status (Kanban)
+    @Query("SELECT s.status, COUNT(s) FROM Sinal s GROUP BY s.status")
+    List<Object[]> countByStatus();
 }
