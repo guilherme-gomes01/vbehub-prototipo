@@ -1,19 +1,28 @@
-import React, { useState } from 'react';
-import { Box, Paper, TextField, Button, Typography, Alert } from '@mui/material';
+import React, { useState, useContext } from 'react'; // Adiciona useContext
+import { Box, Paper, TextField, Button, Typography, Alert, CircularProgress } from '@mui/material';
+import { AuthContext } from '../context/AuthContext'; // Importa o Contexto
 
-const Login = ({ onLogin }) => {
+const Login = () => { // Nao recebe mais props
+    const { login } = useContext(AuthContext); // Pega a funcao de login global
+    
     const [email, setEmail] = useState('');
     const [senha, setSenha] = useState('');
     const [erro, setErro] = useState(false);
+    const [carregando, setCarregando] = useState(false); // Feedback visual
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Validacao "Hardcoded" para o MVP
-        if (email === 'usuariolocal01@vbehub.com' && senha === '123456') {
-            onLogin(true); // Avisa o App que logou
-        } else {
+        setErro(false);
+        setCarregando(true);
+
+        // Chama a funcao do Contexto (que chama a API Java)
+        const sucesso = await login(email, senha);
+
+        if (!sucesso) {
             setErro(true);
+            setCarregando(false);
         }
+        // Se sucesso, o AuthContext atualiza o estado 'authenticated' e o App redireciona sozinho
     };
 
     return (
@@ -25,7 +34,7 @@ const Login = ({ onLogin }) => {
                     🔐 VBE Hub - Acesso Restrito
                 </Typography>
                 
-                {erro && <Alert severity="error">Credenciais inválidas!</Alert>}
+                {erro && <Alert severity="error">Credenciais inválidas! Verifique e-mail e senha.</Alert>}
                 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     <TextField 
@@ -43,8 +52,14 @@ const Login = ({ onLogin }) => {
                         value={senha}
                         onChange={(e) => setSenha(e.target.value)}
                     />
-                    <Button type="submit" variant="contained" size="large" fullWidth>
-                        Entrar no Sistema
+                    <Button 
+                        type="submit" 
+                        variant="contained" 
+                        size="large" 
+                        fullWidth
+                        disabled={carregando}
+                    >
+                        {carregando ? <CircularProgress size={24} color="inherit"/> : "Entrar no Sistema"}
                     </Button>
                 </form>
             </Paper>

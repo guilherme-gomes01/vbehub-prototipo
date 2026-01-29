@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
-import axios from 'axios';
+// import axios from 'axios';
+import api from '../services/api'; // Usa a instancia do axios com baseURL e interceptor
 import { Box, Paper, Typography, Chip } from '@mui/material';
 import L from 'leaflet';
 
@@ -39,7 +40,7 @@ const MapaSinais = () => {
     const [sinais, setSinais] = useState([]);
 
     useEffect(() => {
-        axios.get('http://72.61.222.85:8081/api/sinais')
+        api.get('/sinais')
             .then(response => {
                 // Filtra apenas sinais que tenham latitude e longitude validas
                 const validos = response.data.filter(s => s.latitude && s.longitude);
