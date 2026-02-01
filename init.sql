@@ -20,7 +20,7 @@ CREATE TABLE analista (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    senha VARCHAR(255) NOT NULL -- Em producao seria hash, aqui vai texto puro pro prototipo
+    senha VARCHAR(255) NOT NULL -- Hash BCrypt da senha
 );
 
 -- Tabela de Sinais (O coracao do sistema)
@@ -69,8 +69,7 @@ INSERT INTO fonte (nome, tipo) VALUES
 
 -- Inserindo um Analista de teste
 INSERT INTO analista (nome, email, senha) VALUES 
-('João Guilherme', 'joao.analista@vigimanaus.am.gov.br', '123456');
-
+('Analista Teste', 'teste.analista@vbehub.com', 'insirahashteste');
 
 -- Sinais Fakes Iniciais (Para o mapa nao ficar vazio antes do Python rodar)
 -- Atencao: PostGIS usa (LONGITUDE, LATITUDE)
@@ -89,3 +88,25 @@ INSERT INTO sinal (titulo, descricao, data_deteccao, status, nivel_risco, locali
 
 -- Sinal 5: Sarampo (Fake news descartada para teste)
 ('Rumor de Sarampo no Centro', 'Boato de WhatsApp sem confirmação clínica.', NOW() - INTERVAL '4 days', 'Descartado', 'Baixo', 'Centro', ST_SetSRID(ST_MakePoint(-60.0217, -3.1316), 4326), 2);
+
+-- =================================================================
+-- INDICES PARA PERFORMANCE
+-- =================================================================
+
+-- Indice por status (usado nas queries do Kanban e stats)
+CREATE INDEX IF NOT EXISTS idx_sinal_status ON sinal(status);
+
+-- Indice por nivel de risco (usado nos filtros e stats)
+CREATE INDEX IF NOT EXISTS idx_sinal_nivel_risco ON sinal(nivel_risco);
+
+-- Indice por data de deteccao DESC (usado na ordenacao padrao)
+CREATE INDEX IF NOT EXISTS idx_sinal_data_deteccao ON sinal(data_deteccao DESC);
+
+-- Indice por fonte (usado no filtro por fonte)
+CREATE INDEX IF NOT EXISTS idx_sinal_fonte_id ON sinal(fonte_id);
+
+-- Indice espacial GIST (essencial para queries do mapa com PostGIS)
+CREATE INDEX IF NOT EXISTS idx_sinal_geom ON sinal USING GIST (geom);
+
+-- Indice composto para as queries agregadas do Dashboard
+CREATE INDEX IF NOT EXISTS idx_sinal_stats ON sinal(status, nivel_risco);

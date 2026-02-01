@@ -6,7 +6,8 @@ import {
   Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button
 } from '@mui/material';
 import FilterAltOffIcon from '@mui/icons-material/FilterAltOff';
-import axios from 'axios';
+// import axios from 'axios';
+import api from '../services/api'; // Usa a instancia do axios com baseURL e interceptor
 
 // Mapeamento de cores para o Nivel de Risco
 const getRiskColor = (risk) => {
@@ -39,7 +40,7 @@ const KanbanBoard = () => {
   useEffect(() => {
     const fetchSinais = async () => {
       try {
-        const response = await axios.get('http://72.61.222.85:8081/api/sinais');
+        const response = await api.get('/sinais');
         const data = response.data;
         const newColumns = { ...columnsFromBackend };
         // Limpar para evitar duplicatas em hot reload
@@ -132,7 +133,7 @@ const KanbanBoard = () => {
 
     // API Call
     try {
-      await axios.put(`http://72.61.222.85:8081/api/sinais/${removed.id}/status`, novoStatus, {
+      await api.put(`/sinais/${removed.id}/status`, novoStatus, {
         headers: { 'Content-Type': 'text/plain' }
       });
     } catch (error) {
